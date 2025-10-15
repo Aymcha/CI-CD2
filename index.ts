@@ -1,35 +1,36 @@
-// async function handler(_req: Request): Promise<Response> {
-//   return new Response("Hello World");
-// }
-
-// Deno.serve(handler);
-
 function handlePreFlightRequest(): Response {
   return new Response("Preflight OK!", {
     status: 200,
     headers: {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers": "content-type",
+      "Access-Control-Allow-Methods": "GET,POST,OPTIONS", 
     },
   });
 }
 
 async function handler(_req: Request): Promise<Response> {
-  if (_req.method == "OPTIONS") {
-    handlePreFlightRequest();
+  if (_req.method === "OPTIONS") {
+    return handlePreFlightRequest(); 
   }
 
   const headers = new Headers();
   headers.append("Content-Type", "application/json");
 
+  const url = new URL(_req.url);
+  let word = url.pathname.split("/").pop() || "";
+  word = decodeURIComponent(word);
+
+  console.log("User input word:", word);
+
   const similarityRequestBody = JSON.stringify({
-    word1: "centrale",
+    word1: word,
     word2: "supelec",
   });
 
   const requestOptions = {
     method: "POST",
-    headers: headers,
+    headers,
     body: similarityRequestBody,
     redirect: "follow",
   };
@@ -45,24 +46,30 @@ async function handler(_req: Request): Promise<Response> {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Headers": "content-type",
+          "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
         },
       });
     }
 
     const result = await response.json();
-
-    console.log(result);
     return new Response(JSON.stringify(result), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "content-type",
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
       },
     });
-  } catch (error) {
-    console.error("Fetch error:", error);
-    return new Response(`Error: ${error.message}`, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Fetch error:", message);
+    return new Response(`Error: ${message}`, {
+      status: 500,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
   }
 }
 
